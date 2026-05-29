@@ -23,6 +23,38 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func readyz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ready",
+	})
+}
+
+func infoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(map[string]any{
+		"name": "goboxd",
+		"languages": []map[string]string{
+			{
+				"id":   "py3",
+				"name": "Python 3",
+			},
+			{
+				"id":   "cpp",
+				"name": "C++",
+			},
+		},
+		"endpoints": []string{
+			"GET /healthz",
+			"GET /readyz",
+			"GET /info",
+			"POST /run",
+		},
+	})
+}
+
 func runHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -234,6 +266,8 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 
 func main() {
 	http.HandleFunc("/healthz", healthz)
+	http.HandleFunc("/readyz", readyz)
+	http.HandleFunc("/info", infoHandler)
 	http.HandleFunc("/run", runHandler)
 
 	log.Println("server running on :8080")
