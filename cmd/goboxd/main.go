@@ -7,10 +7,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/thesouldev/goboxd/internal/types"
 )
+
 func healthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -18,6 +22,7 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 	})
 }
+
 func runHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -64,20 +69,37 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	sourcePath := tempDir + "/solution.py"
-	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	var response map[string]any
+	switch req.Language {
+	case "py3":
+		response = runPython(tempDir, req)
+	case "cpp":
+		response = runCpp(tempDir, req)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": "failed to write source file",
+			"error": "unknown language",
 		})
 		return
 	}
 
-	results := make([]map[string]string, 0, len(req.Tests))
+	json.NewEncoder(w).Encode(response)
+}
+
+func runPython(tempDir string, req types.RunRequest) map[string]any {
+	sourcePath := filepath.Join(tempDir, "solution.py")
+	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
+		return map[string]any{
+			"error": "failed to write source file",
+		}
+	}
+
+	results := make([]map[string]any, 0, len(req.Tests))
 	overallStatus := "accepted"
 
 	for _, test := range req.Tests {
-		cmd := exec.Command("python", "solution.py")
+		start := time.Now()
+		cmd := exec.Command(pythonCommand(), "solution.py")
 		cmd.Dir = tempDir
 
 		var stdout bytes.Buffer
@@ -97,17 +119,117 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 			overallStatus = testStatus
 		}
 
-		results = append(results, map[string]string{
-			"status": testStatus,
-			"stdout": stdout.String(),
-			"stderr": stderr.String(),
+		results = append(results, map[string]any{
+			"status":      testStatus,
+			"stdout":      stdout.String(),
+			"stderr":      stderr.String(),
+			"duration_ms": time.Since(start).Milliseconds(),
 		})
 	}
 
-	json.NewEncoder(w).Encode(map[string]any{
+	return map[string]any{
 		"status": overallStatus,
 		"tests":  results,
-	})
+	}
+}
+
+func pythonCommand() string {
+	if runtime.GOOS == "windows" {
+		return "python"
+	}
+
+	return "python3"
+}
+
+func runCpp(tempDir string, req types.RunRequest) map[string]any {
+	sourcePath := filepath.Join(tempDir, "solution.cpp")
+	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
+		return map[string]any{
+			"error": "failed to write source file",
+		}
+	}
+
+	binaryName := "solution"
+	if runtime.GOOS == "windows" {
+		binaryName = "solution.exe"
+	}
+
+	buildStart := time.Now()
+	buildCmd := exec.Command("g++", "solution.cpp", "-o", binaryName)
+	buildCmd.Dir = tempDir
+
+	var buildStdout bytes.Buffer
+	var buildStderr bytes.Buffer
+	buildCmd.Stdout = &buildStdout
+	buildCmd.Stderr = &buildStderr
+
+	if err := buildCmd.Run(); err != nil {
+		results := make([]map[string]any, 0, len(req.Tests))
+		for range req.Tests {
+			results = append(results, map[string]any{
+				"status":      "not_executed",
+				"stdout":      "",
+				"stderr":      "",
+				"duration_ms": int64(0),
+			})
+		}
+
+		return map[string]any{
+			"status": "build_failed",
+			"build": map[string]any{
+				"status":      "failed",
+				"stdout":      buildStdout.String(),
+				"stderr":      buildStderr.String(),
+				"duration_ms": time.Since(buildStart).Milliseconds(),
+			},
+			"tests": results,
+		}
+	}
+
+	results := make([]map[string]any, 0, len(req.Tests))
+	overallStatus := "accepted"
+	executable := "." + string(os.PathSeparator) + binaryName
+
+	for _, test := range req.Tests {
+		start := time.Now()
+		cmd := exec.Command(executable)
+		cmd.Dir = tempDir
+
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdin = strings.NewReader(test.Stdin)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		testStatus := "accepted"
+		if err := cmd.Run(); err != nil {
+			testStatus = "runtime_error"
+		} else if strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
+			testStatus = "wrong_output"
+		}
+
+		if testStatus != "accepted" && overallStatus == "accepted" {
+			overallStatus = testStatus
+		}
+
+		results = append(results, map[string]any{
+			"status":      testStatus,
+			"stdout":      stdout.String(),
+			"stderr":      stderr.String(),
+			"duration_ms": time.Since(start).Milliseconds(),
+		})
+	}
+
+	return map[string]any{
+		"status": overallStatus,
+		"build": map[string]any{
+			"status":      "ok",
+			"stdout":      buildStdout.String(),
+			"stderr":      buildStderr.String(),
+			"duration_ms": time.Since(buildStart).Milliseconds(),
+		},
+		"tests": results,
+	}
 }
 
 func main() {
