@@ -26,8 +26,36 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 func readyz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "ready",
+	checks := map[string]string{
+		"nsjail": "ok",
+		"python": "ok",
+		"g++":    "ok",
+	}
+
+	if _, err := exec.LookPath("nsjail"); err != nil {
+		checks["nsjail"] = "missing"
+	}
+
+	if _, err := exec.LookPath(pythonCommand()); err != nil {
+		checks["python"] = "missing"
+	}
+
+	if _, err := exec.LookPath("g++"); err != nil {
+		checks["g++"] = "missing"
+	}
+
+	status := "ready"
+	for _, check := range checks {
+		if check != "ok" {
+			status = "not_ready"
+			w.WriteHeader(http.StatusServiceUnavailable)
+			break
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]any{
+		"status": status,
+		"checks": checks,
 	})
 }
 
@@ -100,6 +128,13 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer os.RemoveAll(tempDir)
+	if err := os.Chmod(tempDir, 0755); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "failed to prepare temp directory",
+		})
+		return
+	}
 
 	var response map[string]any
 	switch req.Language {
@@ -131,7 +166,7 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 
 	for _, test := range req.Tests {
 		start := time.Now()
-		cmd := exec.Command(pythonCommand(), "solution.py")
+		cmd := sandboxedCommand(tempDir, pythonCommand(), "solution.py")
 		cmd.Dir = tempDir
 
 		var stdout bytes.Buffer
@@ -163,6 +198,35 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 		"status": overallStatus,
 		"tests":  results,
 	}
+}
+
+func sandboxedCommand(workDir string, command string, args ...string) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.Command(command, args...)
+	}
+
+	if _, err := exec.LookPath("nsjail"); err != nil {
+		return exec.Command(command, args...)
+	}
+
+	commandPath := command
+	if path, err := exec.LookPath(command); err == nil {
+		commandPath = path
+	}
+
+	nsjailArgs := []string{
+		"-Mo",
+		"--really_quiet",
+		"--user", "65534",
+		"--group", "65534",
+		"--chroot", "/",
+		"--cwd", workDir,
+		"--",
+		commandPath,
+	}
+	nsjailArgs = append(nsjailArgs, args...)
+
+	return exec.Command("nsjail", nsjailArgs...)
 }
 
 func pythonCommand() string {
@@ -224,7 +288,7 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 
 	for _, test := range req.Tests {
 		start := time.Now()
-		cmd := exec.Command(executable)
+		cmd := sandboxedCommand(tempDir, executable)
 		cmd.Dir = tempDir
 
 		var stdout bytes.Buffer
