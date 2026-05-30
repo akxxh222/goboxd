@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -13,6 +14,11 @@ import (
 	"time"
 
 	"github.com/thesouldev/goboxd/internal/types"
+)
+
+const (
+	buildTimeout = 10 * time.Second
+	runTimeout   = 3 * time.Second
 )
 
 func healthz(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +172,8 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 
 	for _, test := range req.Tests {
 		start := time.Now()
-		cmd := sandboxedCommand(tempDir, pythonCommand(), "solution.py")
+		ctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+		cmd := sandboxedCommand(ctx, tempDir, pythonCommand(), "solution.py")
 		cmd.Dir = tempDir
 
 		var stdout bytes.Buffer
@@ -177,10 +184,15 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 
 		testStatus := "accepted"
 		if err := cmd.Run(); err != nil {
-			testStatus = "runtime_error"
+			if ctx.Err() == context.DeadlineExceeded {
+				testStatus = "time_limit_exceeded"
+			} else {
+				testStatus = "runtime_error"
+			}
 		} else if strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
 			testStatus = "wrong_output"
 		}
+		cancel()
 
 		if testStatus != "accepted" && overallStatus == "accepted" {
 			overallStatus = testStatus
@@ -200,13 +212,13 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 	}
 }
 
-func sandboxedCommand(workDir string, command string, args ...string) *exec.Cmd {
+func sandboxedCommand(ctx context.Context, workDir string, command string, args ...string) *exec.Cmd {
 	if runtime.GOOS == "windows" {
-		return exec.Command(command, args...)
+		return exec.CommandContext(ctx, command, args...)
 	}
 
 	if _, err := exec.LookPath("nsjail"); err != nil {
-		return exec.Command(command, args...)
+		return exec.CommandContext(ctx, command, args...)
 	}
 
 	commandPath := command
@@ -226,7 +238,7 @@ func sandboxedCommand(workDir string, command string, args ...string) *exec.Cmd 
 	}
 	nsjailArgs = append(nsjailArgs, args...)
 
-	return exec.Command("nsjail", nsjailArgs...)
+	return exec.CommandContext(ctx, "nsjail", nsjailArgs...)
 }
 
 func pythonCommand() string {
@@ -251,7 +263,9 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 	}
 
 	buildStart := time.Now()
-	buildCmd := exec.Command("g++", "solution.cpp", "-o", binaryName)
+	buildCtx, buildCancel := context.WithTimeout(context.Background(), buildTimeout)
+	defer buildCancel()
+	buildCmd := exec.CommandContext(buildCtx, "g++", "solution.cpp", "-o", binaryName)
 	buildCmd.Dir = tempDir
 
 	var buildStdout bytes.Buffer
@@ -260,6 +274,11 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 	buildCmd.Stderr = &buildStderr
 
 	if err := buildCmd.Run(); err != nil {
+		buildStatus := "failed"
+		if buildCtx.Err() == context.DeadlineExceeded {
+			buildStatus = "time_limit_exceeded"
+		}
+
 		results := make([]map[string]any, 0, len(req.Tests))
 		for range req.Tests {
 			results = append(results, map[string]any{
@@ -273,7 +292,7 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 		return map[string]any{
 			"status": "build_failed",
 			"build": map[string]any{
-				"status":      "failed",
+				"status":      buildStatus,
 				"stdout":      buildStdout.String(),
 				"stderr":      buildStderr.String(),
 				"duration_ms": time.Since(buildStart).Milliseconds(),
@@ -288,7 +307,8 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 
 	for _, test := range req.Tests {
 		start := time.Now()
-		cmd := sandboxedCommand(tempDir, executable)
+		ctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+		cmd := sandboxedCommand(ctx, tempDir, executable)
 		cmd.Dir = tempDir
 
 		var stdout bytes.Buffer
@@ -299,10 +319,15 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 
 		testStatus := "accepted"
 		if err := cmd.Run(); err != nil {
-			testStatus = "runtime_error"
+			if ctx.Err() == context.DeadlineExceeded {
+				testStatus = "time_limit_exceeded"
+			} else {
+				testStatus = "runtime_error"
+			}
 		} else if strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
 			testStatus = "wrong_output"
 		}
+		cancel()
 
 		if testStatus != "accepted" && overallStatus == "accepted" {
 			overallStatus = testStatus
