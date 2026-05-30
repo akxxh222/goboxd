@@ -19,6 +19,15 @@ import (
 const (
 	buildTimeout = 10 * time.Second
 	runTimeout   = 3 * time.Second
+
+	maxRequestBodyBytes  = 1 << 20
+	maxSourceBytes       = 256 << 10
+	maxTests             = 25
+	maxTestInputBytes    = 64 << 10
+	maxExpectedBytes     = 64 << 10
+	maxCapturedOutputLen = 64 << 10
+
+	outputTruncatedMarker = "\n[output truncated]\n"
 )
 
 func healthz(w http.ResponseWriter, r *http.Request) {
@@ -91,36 +100,25 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 
 func runHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 
 	var req types.RunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		message := "invalid JSON request"
+		if strings.Contains(err.Error(), "request body too large") {
+			message = "request body too large"
+		}
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": "invalid JSON request",
+			"error": message,
 		})
 		return
 	}
 
-	if req.Language == "" {
+	if errorMessage := validateRunRequest(req); errorMessage != "" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": "language is required",
-		})
-		return
-	}
-
-	if req.Source == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "source is required",
-		})
-		return
-	}
-
-	if len(req.Tests) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "at least one test is required",
+			"error": errorMessage,
 		})
 		return
 	}
@@ -159,6 +157,40 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func validateRunRequest(req types.RunRequest) string {
+	if req.Language == "" {
+		return "language is required"
+	}
+
+	if req.Source == "" {
+		return "source is required"
+	}
+
+	if len(req.Source) > maxSourceBytes {
+		return "source is too large"
+	}
+
+	if len(req.Tests) == 0 {
+		return "at least one test is required"
+	}
+
+	if len(req.Tests) > maxTests {
+		return "too many tests"
+	}
+
+	for _, test := range req.Tests {
+		if len(test.Stdin) > maxTestInputBytes {
+			return "test stdin is too large"
+		}
+
+		if len(test.ExpectedStdout) > maxExpectedBytes {
+			return "expected stdout is too large"
+		}
+	}
+
+	return ""
+}
+
 func runPython(tempDir string, req types.RunRequest) map[string]any {
 	sourcePath := filepath.Join(tempDir, "solution.py")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
@@ -176,11 +208,11 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 		cmd := sandboxedCommand(ctx, tempDir, pythonCommand(), "solution.py")
 		cmd.Dir = tempDir
 
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
+		stdout := newCappedBuffer(maxCapturedOutputLen)
+		stderr := newCappedBuffer(maxCapturedOutputLen)
 		cmd.Stdin = strings.NewReader(test.Stdin)
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
 
 		testStatus := "accepted"
 		if err := cmd.Run(); err != nil {
@@ -199,10 +231,12 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 		}
 
 		results = append(results, map[string]any{
-			"status":      testStatus,
-			"stdout":      stdout.String(),
-			"stderr":      stderr.String(),
-			"duration_ms": time.Since(start).Milliseconds(),
+			"status":           testStatus,
+			"stdout":           stdout.String(),
+			"stderr":           stderr.String(),
+			"stdout_truncated": stdout.Truncated(),
+			"stderr_truncated": stderr.Truncated(),
+			"duration_ms":      time.Since(start).Milliseconds(),
 		})
 	}
 
@@ -210,6 +244,47 @@ func runPython(tempDir string, req types.RunRequest) map[string]any {
 		"status": overallStatus,
 		"tests":  results,
 	}
+}
+
+type cappedBuffer struct {
+	buffer    bytes.Buffer
+	limit     int
+	truncated bool
+}
+
+func newCappedBuffer(limit int) *cappedBuffer {
+	return &cappedBuffer{
+		limit: limit,
+	}
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	remaining := b.limit - b.buffer.Len()
+	if remaining <= 0 {
+		b.truncated = true
+		return len(p), nil
+	}
+
+	if len(p) > remaining {
+		b.buffer.Write(p[:remaining])
+		b.truncated = true
+		return len(p), nil
+	}
+
+	b.buffer.Write(p)
+	return len(p), nil
+}
+
+func (b *cappedBuffer) String() string {
+	if b.truncated {
+		return b.buffer.String() + outputTruncatedMarker
+	}
+
+	return b.buffer.String()
+}
+
+func (b *cappedBuffer) Truncated() bool {
+	return b.truncated
 }
 
 func sandboxedCommand(ctx context.Context, workDir string, command string, args ...string) *exec.Cmd {
@@ -268,10 +343,10 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 	buildCmd := exec.CommandContext(buildCtx, "g++", "solution.cpp", "-o", binaryName)
 	buildCmd.Dir = tempDir
 
-	var buildStdout bytes.Buffer
-	var buildStderr bytes.Buffer
-	buildCmd.Stdout = &buildStdout
-	buildCmd.Stderr = &buildStderr
+	buildStdout := newCappedBuffer(maxCapturedOutputLen)
+	buildStderr := newCappedBuffer(maxCapturedOutputLen)
+	buildCmd.Stdout = buildStdout
+	buildCmd.Stderr = buildStderr
 
 	if err := buildCmd.Run(); err != nil {
 		buildStatus := "failed"
@@ -292,10 +367,12 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 		return map[string]any{
 			"status": "build_failed",
 			"build": map[string]any{
-				"status":      buildStatus,
-				"stdout":      buildStdout.String(),
-				"stderr":      buildStderr.String(),
-				"duration_ms": time.Since(buildStart).Milliseconds(),
+				"status":           buildStatus,
+				"stdout":           buildStdout.String(),
+				"stderr":           buildStderr.String(),
+				"stdout_truncated": buildStdout.Truncated(),
+				"stderr_truncated": buildStderr.Truncated(),
+				"duration_ms":      time.Since(buildStart).Milliseconds(),
 			},
 			"tests": results,
 		}
@@ -311,11 +388,11 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 		cmd := sandboxedCommand(ctx, tempDir, executable)
 		cmd.Dir = tempDir
 
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
+		stdout := newCappedBuffer(maxCapturedOutputLen)
+		stderr := newCappedBuffer(maxCapturedOutputLen)
 		cmd.Stdin = strings.NewReader(test.Stdin)
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
 
 		testStatus := "accepted"
 		if err := cmd.Run(); err != nil {
@@ -334,20 +411,24 @@ func runCpp(tempDir string, req types.RunRequest) map[string]any {
 		}
 
 		results = append(results, map[string]any{
-			"status":      testStatus,
-			"stdout":      stdout.String(),
-			"stderr":      stderr.String(),
-			"duration_ms": time.Since(start).Milliseconds(),
+			"status":           testStatus,
+			"stdout":           stdout.String(),
+			"stderr":           stderr.String(),
+			"stdout_truncated": stdout.Truncated(),
+			"stderr_truncated": stderr.Truncated(),
+			"duration_ms":      time.Since(start).Milliseconds(),
 		})
 	}
 
 	return map[string]any{
 		"status": overallStatus,
 		"build": map[string]any{
-			"status":      "ok",
-			"stdout":      buildStdout.String(),
-			"stderr":      buildStderr.String(),
-			"duration_ms": time.Since(buildStart).Milliseconds(),
+			"status":           "ok",
+			"stdout":           buildStdout.String(),
+			"stderr":           buildStderr.String(),
+			"stdout_truncated": buildStdout.Truncated(),
+			"stderr_truncated": buildStderr.Truncated(),
+			"duration_ms":      time.Since(buildStart).Milliseconds(),
 		},
 		"tests": results,
 	}
