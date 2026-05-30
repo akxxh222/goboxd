@@ -32,6 +32,9 @@ const (
 
 func healthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "ok",
@@ -40,6 +43,9 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 
 func readyz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
 
 	checks := map[string]string{
 		"nsjail": "ok",
@@ -76,6 +82,9 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 
 func infoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]any{
 		"name": "goboxd",
@@ -100,6 +109,9 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 
 func runHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 
 	var req types.RunRequest
@@ -155,6 +167,19 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+func requireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method == method {
+		return true
+	}
+
+	w.Header().Set("Allow", method)
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error": "method not allowed",
+	})
+	return false
 }
 
 func validateRunRequest(req types.RunRequest) string {
