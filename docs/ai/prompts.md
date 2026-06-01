@@ -24,18 +24,6 @@ Suggested creating separate handlers and returning JSON responses.
 **What we used / didn't use:**
 Used the handler structure and adjusted the responses to match the specification.
 
----
-
-## Running Python code
-
-**Prompt:**
-How can I execute Python code from Go and capture stdout and stderr?
-
-**Response summary:**
-Suggested using exec.CommandContext and temporary files.
-
-**What we used / didn't use:**
-Used the execution approach and adapted it for sandbox execution.
 
 ---
 
@@ -75,3 +63,107 @@ Suggested testing the API through HTTP requests and validating the returned resu
 
 **What we used / didn't use:**
 Used the general approach and implemented integration tests for Python and C++.
+
+---
+
+## Verifying Python execution
+
+**Prompt:**
+How can I verify that Python execution is fully working and not just returning successful responses?
+
+**Response summary:**
+Suggested testing accepted cases, wrong output cases, runtime errors and stdin handling.
+
+**What we used / didn't use:**
+Used the suggested test cases and manually verified all Python execution paths through the API.
+
+---
+
+## Verifying C++ execution
+
+**Prompt:**
+How can I verify that C++ execution is fully working?
+
+**Response summary:**
+Suggested testing successful compilation, build failures, runtime errors and stdin handling.
+
+**What we used / didn't use:**
+Used the suggested tests and manually verified each execution path using API requests.
+
+---
+
+## Runtime error testing
+
+**Prompt:**
+How can I test runtime_error handling for C++ and Python?
+
+**Response summary:**
+Suggested programs that intentionally crash or raise exceptions.
+
+**What we used / didn't use:**
+Used the examples to verify that runtime errors were correctly mapped to runtime_error responses.
+
+---
+
+## Investigating sandbox logs in API responses
+
+**Prompt:**
+Why are nsjail logs appearing inside stderr responses and how should they be handled?
+
+**Response summary:**
+Explained that sandbox diagnostic logs should be separated from user program stderr.
+
+**What we used / didn't use:**
+Used the recommendation and updated the implementation so API responses only contain user stdout and stderr.
+
+---
+
+## Manual verification of execution results
+
+**Prompt:**
+Review the execution results and verify whether the implementation behaves according to the specification.
+
+**Response summary:**
+Reviewed API responses and suggested additional validation steps.
+
+**What we used / didn't use:**
+Used the review as guidance, but final verification was performed manually through repeated API testing because some execution paths could not be fully validated automatically.
+
+---
+
+## Testing build failures
+
+**Prompt:**
+How should build_failed responses be tested for compiled languages?
+
+**Response summary:**
+Suggested submitting intentionally invalid C++ code and verifying build status handling.
+
+**What we used / didn't use:**
+Used the approach to confirm build failures were reported correctly without crashing the service.
+
+---
+
+## Cleaning API responses
+
+**Prompt:**
+How should stdout and stderr be presented in API responses?
+
+**Response summary:**
+Suggested exposing only program output and hiding sandbox internals.
+
+**What we used / didn't use:**
+Used the recommendation and verified that successful runs returned clean responses without nsjail diagnostic output.
+
+---
+
+## Final Stage 1 verification
+
+**Prompt:**
+Check whether the implementation satisfies the Stage 1 requirements.
+
+**Response summary:**
+Reviewed the specification and compared it against the current implementation.
+
+**What we used / didn't use:**
+Used the checklist as a guide but manually validated endpoints, execution flows, tests and Docker functionality before considering Stage 1 complete.
