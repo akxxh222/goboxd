@@ -31,9 +31,16 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/goboxd ./cmd/gobox
 # ---- Runtime image ----
 FROM debian:${DEBIAN_VERSION}-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates g++ libnl-route-3-200 libprotobuf32 python3 \
+        ca-certificates g++ libnl-route-3-200 libprotobuf32 python3 libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=nsjail-builder /usr/local/bin/nsjail /usr/local/bin/nsjail
 COPY --from=builder        /out/goboxd          /usr/local/bin/goboxd
+
+# Configure capabilities on nsjail so non-root users can run it
+RUN setcap 'cap_sys_admin,cap_setuid,cap_setgid+ep' /usr/local/bin/nsjail
+
+# Create non-root user (available for sandboxed runs if needed, but main server runs as root to allow namespace creation)
+RUN groupadd -g 1000 gobox && useradd -u 1000 -g gobox -m -s /bin/bash gobox
+
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/goboxd"]

@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -61,7 +60,14 @@ func buildCpp(tempDir string, binaryName string) types.BuildResult {
 	ctx, cancel := context.WithTimeout(context.Background(), config.BuildTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "g++", "solution.cpp", "-o", binaryName)
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
+		TimeLimitSeconds: "10",
+		AddressSpaceMB:   "1024", // g++ needs more memory to compile
+		FileSizeMB:       "10",   // to write binary
+		OpenFiles:        "128",
+		Processes:        "32",
+		ReadWriteDirs:    []string{tempDir},
+	}, "g++", "solution.cpp", "-o", binaryName)
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)
