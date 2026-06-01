@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 
 	"github.com/thesouldev/goboxd/internal/config"
@@ -43,7 +44,6 @@ func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts Sandb
 
 	nsjailArgs := []string{
 		"-Mo",
-		"-v",
 		"--user", "65534",
 		"--group", "65534",
 		"--time_limit", opts.TimeLimitSeconds,
@@ -62,6 +62,7 @@ func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts Sandb
 
 	nsjailArgs = append(nsjailArgs,
 		"--cwd", workDir,
+		"--log", filepath.Join(workDir, "nsjail.log"),
 		"--",
 		commandPath,
 	)
