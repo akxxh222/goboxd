@@ -95,6 +95,23 @@ func info(w http.ResponseWriter, r *http.Request) {
 			"GET /info",
 			"POST /run",
 		},
+		"limits": map[string]any{
+			"build_timeout_ms":       config.BuildTimeout.Milliseconds(),
+			"run_timeout_ms":         config.RunTimeout.Milliseconds(),
+			"max_request_body_bytes": config.MaxRequestBodyBytes,
+			"max_source_bytes":       config.MaxSourceBytes,
+			"max_tests":              config.MaxTests,
+			"max_test_input_bytes":   config.MaxTestInputBytes,
+			"max_expected_bytes":     config.MaxExpectedBytes,
+			"max_captured_output":    config.MaxCapturedOutputLen,
+			"sandbox": map[string]string{
+				"cpu_seconds":      config.SandboxCPUSeconds,
+				"address_space_mb": config.SandboxAddressSpaceMB,
+				"file_size_mb":     config.SandboxFileSizeMB,
+				"open_files":       config.SandboxOpenFiles,
+				"processes":        config.SandboxProcesses,
+			},
+		},
 	})
 }
 

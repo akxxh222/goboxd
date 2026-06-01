@@ -8,6 +8,12 @@ const (
 
 	StaleTempDirAge = 30 * time.Minute
 
+	SandboxCPUSeconds     = "3"
+	SandboxAddressSpaceMB = "256"
+	SandboxFileSizeMB     = "1"
+	SandboxOpenFiles      = "32"
+	SandboxProcesses      = "32"
+
 	MaxRequestBodyBytes  = 1 << 20
 	MaxSourceBytes       = 256 << 10
 	MaxTests             = 25

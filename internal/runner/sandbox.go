@@ -4,6 +4,8 @@ import (
 	"context"
 	"os/exec"
 	"runtime"
+
+	"github.com/thesouldev/goboxd/internal/config"
 )
 
 func sandboxedCommand(ctx context.Context, workDir string, command string, args ...string) *exec.Cmd {
@@ -25,6 +27,12 @@ func sandboxedCommand(ctx context.Context, workDir string, command string, args 
 		"--really_quiet",
 		"--user", "65534",
 		"--group", "65534",
+		"--time_limit", config.SandboxCPUSeconds,
+		"--rlimit_cpu", config.SandboxCPUSeconds,
+		"--rlimit_as", config.SandboxAddressSpaceMB,
+		"--rlimit_fsize", config.SandboxFileSizeMB,
+		"--rlimit_nofile", config.SandboxOpenFiles,
+		"--rlimit_nproc", config.SandboxProcesses,
 		"--chroot", "/",
 		"--cwd", workDir,
 		"--",
