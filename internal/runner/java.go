@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,12 +51,12 @@ func buildJava(tempDir string) types.BuildResult {
 
 	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
 		TimeLimitSeconds: "10",
-		AddressSpaceMB:   "1024",
+		AddressSpaceMB:   "max",
 		FileSizeMB:       "10",
-		OpenFiles:        "128",
-		Processes:        "32",
+		OpenFiles:        "max",
+		Processes:        "max",
 		ReadWriteDirs:    []string{tempDir},
-	}, "javac", "Main.java")
+	}, "javac", "-J-Xmx512m", "Main.java")
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)
@@ -74,8 +73,9 @@ func buildJava(tempDir string) types.BuildResult {
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "javac build")))
+	stderr.Write([]byte(processStderr(rawStderr, "javac build")))
 	logNsjailFile(tempDir, "javac build")
 
 	return types.BuildResult{
@@ -93,7 +93,14 @@ func runJavaTest(tempDir string, test types.TestCase) types.TestResult {
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
 
-	cmd := sandboxedCommand(ctx, tempDir, "java", "-cp", ".", "Main")
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
+		TimeLimitSeconds: config.SandboxCPUSeconds,
+		AddressSpaceMB:   "max",
+		FileSizeMB:       config.SandboxFileSizeMB,
+		OpenFiles:        "max",
+		Processes:        "max",
+		ReadWriteDirs:    []string{tempDir},
+	}, "java", "-Xmx512m", "-cp", ".", "Main")
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)
@@ -111,8 +118,9 @@ func runJavaTest(tempDir string, test types.TestCase) types.TestResult {
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "java run")))
+	stderr.Write([]byte(processStderr(rawStderr, "java run")))
 	logNsjailFile(tempDir, "java run")
 
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {

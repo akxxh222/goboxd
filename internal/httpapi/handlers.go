@@ -183,8 +183,8 @@ func run(w http.ResponseWriter, r *http.Request) {
 
 	response, ok := runner.Run(tempDir, req)
 	if !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "unknown language",
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "failed to execute runner",
 		})
 		return
 	}

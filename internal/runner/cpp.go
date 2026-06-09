@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -85,8 +84,9 @@ func buildCpp(tempDir string, binaryName string) types.BuildResult {
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "g++ build")))
+	stderr.Write([]byte(processStderr(rawStderr, "g++ build")))
 	logNsjailFile(tempDir, "g++ build")
 
 	return types.BuildResult{
@@ -122,8 +122,9 @@ func runCppTest(tempDir string, executable string, test types.TestCase) types.Te
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "cpp run")))
+	stderr.Write([]byte(processStderr(rawStderr, "cpp run")))
 	logNsjailFile(tempDir, "cpp run")
 
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
@@ -138,15 +139,4 @@ func runCppTest(tempDir string, executable string, test types.TestCase) types.Te
 		StderrTruncated: stderr.Truncated(),
 		DurationMS:      time.Since(start).Milliseconds(),
 	}
-}
-
-func notExecutedResults(count int) []types.TestResult {
-	results := make([]types.TestResult, 0, count)
-	for i := 0; i < count; i++ {
-		results = append(results, types.TestResult{
-			Status: "not_executed",
-		})
-	}
-
-	return results
 }

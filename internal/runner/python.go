@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,8 +57,9 @@ func runPythonTest(tempDir string, test types.TestCase) types.TestResult {
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "python")))
+	stderr.Write([]byte(processStderr(rawStderr, "python")))
 	logNsjailFile(tempDir, "python")
 
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {

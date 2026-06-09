@@ -30,15 +30,17 @@ func extractNsjailLogs(s string) (string, string) {
 
 func processStderr(raw string, tag string) string {
     cleaned, extracted := extractNsjailLogs(raw)
-    if extracted != "" {
-        log.Printf("nsjail diagnostics (%s): %s", tag, extracted)
-    }
-    return cleaned
+	if extracted != "" && os.Getenv("DEBUG_NSJAIL") == "true" {
+		log.Printf("nsjail diagnostics (%s): %s", tag, extracted)
+	}
+	return cleaned
 }
 
 func logNsjailFile(tempDir string, tag string) {
-    if data, err := os.ReadFile(filepath.Join(tempDir, "nsjail.log")); err == nil && len(data) > 0 {
-        log.Printf("nsjail log (%s): %s", tag, string(data))
-        _ = os.Remove(filepath.Join(tempDir, "nsjail.log"))
-    }
+	if data, err := os.ReadFile(filepath.Join(tempDir, "nsjail.log")); err == nil && len(data) > 0 {
+		if os.Getenv("DEBUG_NSJAIL") == "true" {
+			log.Printf("nsjail log (%s): %s", tag, string(data))
+		}
+		_ = os.Remove(filepath.Join(tempDir, "nsjail.log"))
+	}
 }

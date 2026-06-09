@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -85,8 +84,9 @@ func buildC(tempDir string, binaryName string) types.BuildResult {
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "gcc build")))
+	stderr.Write([]byte(processStderr(rawStderr, "gcc build")))
 	logNsjailFile(tempDir, "gcc build")
 
 	return types.BuildResult{
@@ -122,8 +122,9 @@ func runCTest(tempDir string, executable string, test types.TestCase) types.Test
 		}
 	}
 
+	rawStderr := stderr.String()
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "c run")))
+	stderr.Write([]byte(processStderr(rawStderr, "c run")))
 	logNsjailFile(tempDir, "c run")
 
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {

@@ -19,3 +19,6 @@ services:
     working_dir: /src
     profiles: ["tools"]
     entrypoint: []
+    privileged: true
+    environment:
+      - API_URL=http://goboxd:8080
