@@ -21,6 +21,8 @@ func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
 		return runBash(tempDir, req), true
 	case "node":
 		return runNode(tempDir, req), true
+	case "verilog":
+		return runVerilog(tempDir, req), true
 	default:
 		return types.RunResponse{}, false
 	}

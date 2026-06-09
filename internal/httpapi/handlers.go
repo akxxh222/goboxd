@@ -47,6 +47,8 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 		"java":   "ok",
 		"bash":   "ok",
 		"node":   "ok",
+		"iverilog": "ok",
+		"vvp":      "ok",
 	}
 
 	if _, err := exec.LookPath("nsjail"); err != nil {
@@ -79,6 +81,14 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := exec.LookPath("node"); err != nil {
 		checks["node"] = "missing"
+	}
+
+	if _, err := exec.LookPath("iverilog"); err != nil {
+		checks["iverilog"] = "missing"
+	}
+
+	if _, err := exec.LookPath("vvp"); err != nil {
+		checks["vvp"] = "missing"
 	}
 
 	status := "ready"
@@ -128,6 +138,10 @@ func info(w http.ResponseWriter, r *http.Request) {
 			{
 				"id":   "node",
 				"name": "JavaScript (Node.js)",
+			},
+			{
+				"id":   "verilog",
+				"name": "Verilog",
 			},
 		},
 		"endpoints": []string{
