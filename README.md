@@ -2,13 +2,14 @@
 
 goboxd is a Go HTTP service that executes untrusted code inside `nsjail` sandboxes and returns structured build and test results over HTTP.
 
-The current implementation supports Python 3 and C++ execution, request validation, resource limits, and sandboxed program execution through `nsjail`.
+The current implementation supports Python 3, C++, C, and Java execution, request validation, resource limits, and sandboxed program execution through `nsjail`.
 
 ## Supported Languages
 
 * Python 3 (`py3`)
 * C++ (`cpp`)
 * C (`c`)
+* Java (`java`)
 
 ## Running Locally
 

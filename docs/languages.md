@@ -6,6 +6,8 @@ This document describes the languages supported by the current goboxd implementa
 
 - `py3`: Python 3
 - `cpp`: C++
+- `c`: C
+- `java`: Java
 
 ## Language registry
 

@@ -15,6 +15,8 @@ func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
 		return runCpp(tempDir, req), true
 	case "c":
 		return runC(tempDir, req), true
+	case "java":
+		return runJava(tempDir, req), true
 	default:
 		return types.RunResponse{}, false
 	}

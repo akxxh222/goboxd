@@ -43,6 +43,8 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 		"python": "ok",
 		"g++":    "ok",
 		"gcc":    "ok",
+		"javac":  "ok",
+		"java":   "ok",
 	}
 
 	if _, err := exec.LookPath("nsjail"); err != nil {
@@ -59,6 +61,14 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := exec.LookPath("gcc"); err != nil {
 		checks["gcc"] = "missing"
+	}
+
+	if _, err := exec.LookPath("javac"); err != nil {
+		checks["javac"] = "missing"
+	}
+
+	if _, err := exec.LookPath("java"); err != nil {
+		checks["java"] = "missing"
 	}
 
 	status := "ready"
@@ -96,6 +106,10 @@ func info(w http.ResponseWriter, r *http.Request) {
 			{
 				"id":   "c",
 				"name": "C",
+			},
+			{
+				"id":   "java",
+				"name": "Java",
 			},
 		},
 		"endpoints": []string{
