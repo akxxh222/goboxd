@@ -17,6 +17,8 @@ func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
 		return runC(tempDir, req), true
 	case "java":
 		return runJava(tempDir, req), true
+	case "bash":
+		return runBash(tempDir, req), true
 	default:
 		return types.RunResponse{}, false
 	}
@@ -69,4 +71,15 @@ func (b *cappedBuffer) String() string {
 
 func (b *cappedBuffer) Truncated() bool {
 	return b.truncated
+}
+
+func notExecutedResults(count int) []types.TestResult {
+	results := make([]types.TestResult, 0, count)
+	for i := 0; i < count; i++ {
+		results = append(results, types.TestResult{
+			Status: "not_executed",
+		})
+	}
+
+	return results
 }
