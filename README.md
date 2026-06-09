@@ -8,6 +8,7 @@ The current implementation supports Python 3 and C++ execution, request validati
 
 * Python 3 (`py3`)
 * C++ (`cpp`)
+* C (`c`)
 
 ## Running Locally
 

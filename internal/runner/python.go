@@ -58,21 +58,9 @@ func runPythonTest(tempDir string, test types.TestCase) types.TestResult {
 		}
 	}
 
-	if status != "accepted" && stderr.String() != "" {
-		cleaned, extracted := extractNsjailLogs(stderr.String())
-		if extracted != "" {
-			log.Printf("nsjail diagnostics (python): %s", extracted)
-		}
-		// replace stderr buffer content with cleaned version
-		stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-		stderr.Write([]byte(cleaned))
-	}
-
-	// Read nsjail diagnostic log (if any) and send to server logs instead of API stderr
-	if data, err := os.ReadFile(filepath.Join(tempDir, "nsjail.log")); err == nil && len(data) > 0 {
-		log.Printf("nsjail log (python): %s", string(data))
-		_ = os.Remove(filepath.Join(tempDir, "nsjail.log"))
-	}
+	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
+	stderr.Write([]byte(processStderr(stderr.String(), "python")))
+	logNsjailFile(tempDir, "python")
 
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
 		status = "wrong_output"

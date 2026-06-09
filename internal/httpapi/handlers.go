@@ -42,6 +42,7 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 		"nsjail": "ok",
 		"python": "ok",
 		"g++":    "ok",
+		"gcc":    "ok",
 	}
 
 	if _, err := exec.LookPath("nsjail"); err != nil {
@@ -54,6 +55,10 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := exec.LookPath("g++"); err != nil {
 		checks["g++"] = "missing"
+	}
+
+	if _, err := exec.LookPath("gcc"); err != nil {
+		checks["gcc"] = "missing"
 	}
 
 	status := "ready"
@@ -87,6 +92,10 @@ func info(w http.ResponseWriter, r *http.Request) {
 			{
 				"id":   "cpp",
 				"name": "C++",
+			},
+			{
+				"id":   "c",
+				"name": "C",
 			},
 		},
 		"endpoints": []string{

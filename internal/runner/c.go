@@ -13,16 +13,16 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
-func runCpp(tempDir string, req types.RunRequest) types.RunResponse {
-	sourcePath := filepath.Join(tempDir, "solution.cpp")
+func runC(tempDir string, req types.RunRequest) types.RunResponse {
+	sourcePath := filepath.Join(tempDir, "solution.c")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
 		return types.RunResponse{
 			Status: "internal_error",
 		}
 	}
 
-	binaryName := cppBinaryName()
-	build := buildCpp(tempDir, binaryName)
+	binaryName := cBinaryName()
+	build := buildC(tempDir, binaryName)
 	if build.Status != "ok" {
 		return types.RunResponse{
 			Status: "build_failed",
@@ -36,7 +36,7 @@ func runCpp(tempDir string, req types.RunRequest) types.RunResponse {
 	executable := "." + string(os.PathSeparator) + binaryName
 
 	for _, test := range req.Tests {
-		result := runCppTest(tempDir, executable, test)
+		result := runCTest(tempDir, executable, test)
 		overallStatus = firstNonAccepted(overallStatus, result.Status)
 		results = append(results, result)
 	}
@@ -48,7 +48,7 @@ func runCpp(tempDir string, req types.RunRequest) types.RunResponse {
 	}
 }
 
-func cppBinaryName() string {
+func cBinaryName() string {
 	if runtime.GOOS == "windows" {
 		return "solution.exe"
 	}
@@ -56,19 +56,19 @@ func cppBinaryName() string {
 	return "solution"
 }
 
-func buildCpp(tempDir string, binaryName string) types.BuildResult {
+func buildC(tempDir string, binaryName string) types.BuildResult {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), config.BuildTimeout)
 	defer cancel()
 
 	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
 		TimeLimitSeconds: "10",
-		AddressSpaceMB:   "1024", // g++ needs more memory to compile
-		FileSizeMB:       "10",   // to write binary
+		AddressSpaceMB:   "1024",
+		FileSizeMB:       "10",
 		OpenFiles:        "128",
 		Processes:        "32",
 		ReadWriteDirs:    []string{tempDir},
-	}, "g++", "-w", "solution.cpp", "-o", binaryName)
+	}, "gcc", "-w", "solution.c", "-o", binaryName)
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)
@@ -86,8 +86,8 @@ func buildCpp(tempDir string, binaryName string) types.BuildResult {
 	}
 
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "g++ build")))
-	logNsjailFile(tempDir, "g++ build")
+	stderr.Write([]byte(processStderr(stderr.String(), "gcc build")))
+	logNsjailFile(tempDir, "gcc build")
 
 	return types.BuildResult{
 		Status:          status,
@@ -99,7 +99,7 @@ func buildCpp(tempDir string, binaryName string) types.BuildResult {
 	}
 }
 
-func runCppTest(tempDir string, executable string, test types.TestCase) types.TestResult {
+func runCTest(tempDir string, executable string, test types.TestCase) types.TestResult {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
@@ -123,8 +123,8 @@ func runCppTest(tempDir string, executable string, test types.TestCase) types.Te
 	}
 
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
-	stderr.Write([]byte(processStderr(stderr.String(), "cpp run")))
-	logNsjailFile(tempDir, "cpp run")
+	stderr.Write([]byte(processStderr(stderr.String(), "c run")))
+	logNsjailFile(tempDir, "c run")
 
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
 		status = "wrong_output"
@@ -138,15 +138,4 @@ func runCppTest(tempDir string, executable string, test types.TestCase) types.Te
 		StderrTruncated: stderr.Truncated(),
 		DurationMS:      time.Since(start).Milliseconds(),
 	}
-}
-
-func notExecutedResults(count int) []types.TestResult {
-	results := make([]types.TestResult, 0, count)
-	for i := 0; i < count; i++ {
-		results = append(results, types.TestResult{
-			Status: "not_executed",
-		})
-	}
-
-	return results
 }
