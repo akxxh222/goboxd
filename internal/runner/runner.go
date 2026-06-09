@@ -19,6 +19,8 @@ func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
 		return runJava(tempDir, req), true
 	case "bash":
 		return runBash(tempDir, req), true
+	case "node":
+		return runNode(tempDir, req), true
 	default:
 		return types.RunResponse{}, false
 	}

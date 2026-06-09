@@ -46,6 +46,7 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 		"javac":  "ok",
 		"java":   "ok",
 		"bash":   "ok",
+		"node":   "ok",
 	}
 
 	if _, err := exec.LookPath("nsjail"); err != nil {
@@ -74,6 +75,10 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := exec.LookPath("bash"); err != nil {
 		checks["bash"] = "missing"
+	}
+
+	if _, err := exec.LookPath("node"); err != nil {
+		checks["node"] = "missing"
 	}
 
 	status := "ready"
@@ -119,6 +124,10 @@ func info(w http.ResponseWriter, r *http.Request) {
 			{
 				"id":   "bash",
 				"name": "Bash",
+			},
+			{
+				"id":   "node",
+				"name": "JavaScript (Node.js)",
 			},
 		},
 		"endpoints": []string{
