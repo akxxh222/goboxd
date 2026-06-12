@@ -8,6 +8,11 @@ services:
     ports:
       - "8080:8080"
     privileged: true
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
   tools:
     build:

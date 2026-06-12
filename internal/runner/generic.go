@@ -84,8 +84,8 @@ func buildGeneric(tempDir string, req types.RunRequest, def LanguageDef) types.B
 		TimeLimitSeconds: "10",
 		AddressSpaceMB:   "max",
 		FileSizeMB:       "10",
-		OpenFiles:        "128",
-		Processes:        "32",
+		OpenFiles:        "max",
+		Processes:        "max",
 		ReadWriteDirs:    []string{tempDir},
 	}
 	applyOverrides(&opts, req.ResourceOverrides)
@@ -132,10 +132,10 @@ func runGenericTest(tempDir string, req types.RunRequest, def LanguageDef, test 
 
 	opts := SandboxOptions{
 		TimeLimitSeconds: config.SandboxCPUSeconds,
-		AddressSpaceMB:   config.SandboxAddressSpaceMB,
+		AddressSpaceMB:   "max",
 		FileSizeMB:       config.SandboxFileSizeMB,
-		OpenFiles:        config.SandboxOpenFiles,
-		Processes:        config.SandboxProcesses,
+		OpenFiles:        "max",
+		Processes:        "max",
 		ReadWriteDirs:    []string{tempDir},
 	}
 	applyOverrides(&opts, req.ResourceOverrides)
