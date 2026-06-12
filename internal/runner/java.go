@@ -11,6 +11,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// runJava is a Stage 1 legacy executor for Java code.
+// It serves as a fallback if java is removed from languages.yaml.
 func runJava(tempDir string, req types.RunRequest) types.RunResponse {
 	sourcePath := filepath.Join(tempDir, "Main.java")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
@@ -19,6 +21,7 @@ func runJava(tempDir string, req types.RunRequest) types.RunResponse {
 		}
 	}
 
+	// 1. Compile Phase using javac
 	build := buildJava(tempDir)
 	if build.Status != "ok" {
 		return types.RunResponse{
@@ -31,6 +34,7 @@ func runJava(tempDir string, req types.RunRequest) types.RunResponse {
 	results := make([]types.TestResult, 0, len(req.Tests))
 	overallStatus := "accepted"
 
+	// 2. Execution Phase using java
 	for _, test := range req.Tests {
 		result := runJavaTest(tempDir, test)
 		overallStatus = firstNonAccepted(overallStatus, result.Status)

@@ -11,6 +11,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// runNode is a Stage 1 legacy executor for Node.js code.
+// It serves as a fallback if node is removed from languages.yaml.
 func runNode(tempDir string, req types.RunRequest) types.RunResponse {
 	sourcePath := filepath.Join(tempDir, "solution.js")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {

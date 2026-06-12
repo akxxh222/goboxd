@@ -9,6 +9,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/config"
 )
 
+// SandboxOptions configures the resource limits passed to nsjail.
+// These prevent denial-of-service attacks like fork bombs or memory exhaustion.
 type SandboxOptions struct {
 	TimeLimitSeconds string
 	AddressSpaceMB   string
@@ -18,6 +20,7 @@ type SandboxOptions struct {
 	ReadWriteDirs    []string
 }
 
+// sandboxedCommand is a convenience wrapper for sandboxedCommandWithOptions using defaults.
 func sandboxedCommand(ctx context.Context, workDir string, command string, args ...string) *exec.Cmd {
 	return sandboxedCommandWithOptions(ctx, workDir, SandboxOptions{
 		TimeLimitSeconds: config.SandboxCPUSeconds,
@@ -28,7 +31,10 @@ func sandboxedCommand(ctx context.Context, workDir string, command string, args 
 	}, command, args...)
 }
 
+// sandboxedCommandWithOptions wraps a command execution with nsjail isolation.
 func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts SandboxOptions, command string, args ...string) *exec.Cmd {
+	// Windows local development fallback (nsjail is Linux-only).
+	// This allows devs to run basic tests on Windows without isolation.
 	if runtime.GOOS == "windows" {
 		return exec.CommandContext(ctx, command, args...)
 	}
@@ -42,6 +48,7 @@ func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts Sandb
 		commandPath = path
 	}
 
+	// Construct the highly restrictive nsjail command line arguments
 	nsjailArgs := []string{
 		"-Mo",
 		"--user", "65534",
@@ -54,9 +61,11 @@ func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts Sandb
 		"--rlimit_nproc", opts.Processes,
 		"--chroot", "/",
 		"-E", "PATH",
+		// Ensure absolute TMPDIR is used to fix issues with R and other TMPDIR-dependent languages
 		"-E", "TMPDIR=" + workDir,
 	}
 
+	// Explicitly map allowed read/write directories (by default, root is read-only)
 	for _, rwDir := range opts.ReadWriteDirs {
 		nsjailArgs = append(nsjailArgs, "-B", rwDir)
 	}
@@ -72,6 +81,7 @@ func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts Sandb
 	return exec.CommandContext(ctx, "nsjail", nsjailArgs...)
 }
 
+// PythonCommand resolves the correct python interpreter name across OS environments.
 func PythonCommand() string {
 	if runtime.GOOS == "windows" {
 		return "python"

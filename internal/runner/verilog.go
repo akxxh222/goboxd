@@ -11,6 +11,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// runVerilog is a Stage 1 legacy executor for Verilog code.
+// It serves as a fallback if Verilog is removed from languages.yaml.
 func runVerilog(tempDir string, req types.RunRequest) types.RunResponse {
 	sourcePath := filepath.Join(tempDir, "solution.v")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
@@ -20,6 +22,7 @@ func runVerilog(tempDir string, req types.RunRequest) types.RunResponse {
 	}
 
 	binaryName := "solution.vvp"
+	// 1. Compile Phase using iverilog
 	build := buildVerilog(tempDir, binaryName)
 	if build.Status != "ok" {
 		return types.RunResponse{
@@ -32,6 +35,7 @@ func runVerilog(tempDir string, req types.RunRequest) types.RunResponse {
 	results := make([]types.TestResult, 0, len(req.Tests))
 	overallStatus := "accepted"
 
+	// 2. Execution Phase using vvp
 	for _, test := range req.Tests {
 		result := runVerilogTest(tempDir, binaryName, test)
 		overallStatus = firstNonAccepted(overallStatus, result.Status)

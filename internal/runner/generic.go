@@ -11,6 +11,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// applyOverrides applies per-request resource limits (e.g., memory, processes)
+// dynamically. This is required for languages like R that consume heavy threads (OpenMP).
 func applyOverrides(opts *SandboxOptions, overrides *types.ResourceOverrides) {
 	if overrides == nil {
 		return
@@ -32,12 +34,16 @@ func applyOverrides(opts *SandboxOptions, overrides *types.ResourceOverrides) {
 	}
 }
 
+// runGeneric orchestrates the full lifecycle (build + test execution) for a language
+// defined entirely through the YAML configuration.
 func runGeneric(tempDir string, req types.RunRequest, def LanguageDef) types.RunResponse {
+	// 1. Write the source code payload to the securely isolated temporary directory
 	sourcePath := filepath.Join(tempDir, def.SourceFile)
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
 		return types.RunResponse{Status: "internal_error"}
 	}
 
+	// 2. Optional: Build phase (only for compiled languages like C++, OCaml)
 	var buildResult *types.BuildResult
 	if def.IsCompiled && len(def.BuildCmd) > 0 {
 		b := buildGeneric(tempDir, req, def)
@@ -51,6 +57,7 @@ func runGeneric(tempDir string, req types.RunRequest, def LanguageDef) types.Run
 		}
 	}
 
+	// 3. Execution phase: Run each test case in its own isolated sandbox
 	results := make([]types.TestResult, 0, len(req.Tests))
 	overallStatus := "accepted"
 
@@ -67,6 +74,7 @@ func runGeneric(tempDir string, req types.RunRequest, def LanguageDef) types.Run
 	}
 }
 
+// buildGeneric executes the compiler command securely inside an nsjail sandbox.
 func buildGeneric(tempDir string, req types.RunRequest, def LanguageDef) types.BuildResult {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), config.BuildTimeout)
@@ -116,6 +124,7 @@ func buildGeneric(tempDir string, req types.RunRequest, def LanguageDef) types.B
 	}
 }
 
+// runGenericTest executes the runtime command (e.g., Python, compiled binary) against a single test case.
 func runGenericTest(tempDir string, req types.RunRequest, def LanguageDef, test types.TestCase) types.TestResult {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
@@ -143,6 +152,7 @@ func runGenericTest(tempDir string, req types.RunRequest, def LanguageDef, test 
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
+	// Interpret exit codes and timeouts to provide standardized API statuses
 	status := "accepted"
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
@@ -156,6 +166,7 @@ func runGenericTest(tempDir string, req types.RunRequest, def LanguageDef, test 
 	stderr = newCappedBuffer(config.MaxCapturedOutputLen)
 	stderr.Write([]byte(processStderr(rawStderr, def.Name)))
 
+	// Validate standard output against the expected answer
 	if status == "accepted" && strings.TrimSpace(stdout.String()) != strings.TrimSpace(test.ExpectedStdout) {
 		status = "wrong_output"
 	}

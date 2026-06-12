@@ -7,10 +7,16 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// Run is the main entry point for executing untrusted code.
+// It implements the "Strangler Fig Pattern": it first attempts to route the request
+// through the dynamic YAML registry (Stage 2/3), and gracefully falls back to the
+// hardcoded logic (Stage 1) if the language isn't defined in the YAML.
 func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
+	// 1. Try dynamic generic runner (YAML Plug-and-Play)
 	if def, ok := Registry[req.Language]; ok {
 		return runGeneric(tempDir, req, def), true
 	}
+	// 2. Fallback to Stage 1 legacy hardcoded language runners
 	switch req.Language {
 	case "py3":
 		return runPython(tempDir, req), true
@@ -31,6 +37,8 @@ func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
 	}
 }
 
+// firstNonAccepted helps aggregate test statuses. It retains the first error encountered
+// across multiple tests so the overall run status reflects the first failure.
 func firstNonAccepted(current string, next string) string {
 	if current == "accepted" && next != "accepted" {
 		return next
@@ -39,6 +47,8 @@ func firstNonAccepted(current string, next string) string {
 	return current
 }
 
+// cappedBuffer is a security mechanism. It captures stdout/stderr up to a strict
+// memory limit. If the child process attempts to spam output, it gets truncated.
 type cappedBuffer struct {
 	buffer    bytes.Buffer
 	limit     int

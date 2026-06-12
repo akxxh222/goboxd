@@ -11,6 +11,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// runBash is a Stage 1 legacy executor for Bash code.
+// It serves as a fallback if bash is removed from languages.yaml.
 func runBash(tempDir string, req types.RunRequest) types.RunResponse {
 	sourcePath := filepath.Join(tempDir, "solution.sh")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {

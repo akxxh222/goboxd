@@ -12,6 +12,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// runCpp is a Stage 1 legacy executor for C++ code.
+// It serves as a fallback if cpp is removed from languages.yaml.
 func runCpp(tempDir string, req types.RunRequest) types.RunResponse {
 	sourcePath := filepath.Join(tempDir, "solution.cpp")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {
@@ -21,6 +23,7 @@ func runCpp(tempDir string, req types.RunRequest) types.RunResponse {
 	}
 
 	binaryName := cppBinaryName()
+	// 1. Compile Phase using g++
 	build := buildCpp(tempDir, binaryName)
 	if build.Status != "ok" {
 		return types.RunResponse{
@@ -34,6 +37,7 @@ func runCpp(tempDir string, req types.RunRequest) types.RunResponse {
 	overallStatus := "accepted"
 	executable := "." + string(os.PathSeparator) + binaryName
 
+	// 2. Execution Phase
 	for _, test := range req.Tests {
 		result := runCppTest(tempDir, executable, test)
 		overallStatus = firstNonAccepted(overallStatus, result.Status)

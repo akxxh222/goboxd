@@ -11,6 +11,8 @@ import (
 	"github.com/thesouldev/goboxd/internal/types"
 )
 
+// runPython is a Stage 1 legacy executor for Python 3 code.
+// It serves as a fallback if py3 is removed from languages.yaml.
 func runPython(tempDir string, req types.RunRequest) types.RunResponse {
 	sourcePath := filepath.Join(tempDir, "solution.py")
 	if err := os.WriteFile(sourcePath, []byte(req.Source), 0644); err != nil {

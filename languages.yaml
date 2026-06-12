@@ -11,3 +11,49 @@ ocaml:
   is_compiled: true
   build_cmd: ["ocamlopt", "-o", "solution", "solution.ml"]
   run_cmd: ["./solution"]
+py3:
+  id: "py3"
+  name: "Python 3"
+  source_file: "solution.py"
+  is_compiled: false
+  run_cmd: ["python3", "solution.py"]
+cpp:
+  id: "cpp"
+  name: "C++"
+  source_file: "solution.cpp"
+  is_compiled: true
+  build_cmd: ["g++", "-o", "solution", "solution.cpp"]
+  run_cmd: ["./solution"]
+c:
+  id: "c"
+  name: "C"
+  source_file: "solution.c"
+  is_compiled: true
+  build_cmd: ["gcc", "-o", "solution", "solution.c"]
+  run_cmd: ["./solution"]
+java:
+  id: "java"
+  name: "Java"
+  source_file: "Solution.java"
+  is_compiled: true
+  build_cmd: ["javac", "Solution.java"]
+  run_cmd: ["java", "Solution"]
+bash:
+  id: "bash"
+  name: "Bash"
+  source_file: "solution.sh"
+  is_compiled: false
+  run_cmd: ["bash", "solution.sh"]
+node:
+  id: "node"
+  name: "Node.js"
+  source_file: "solution.js"
+  is_compiled: false
+  run_cmd: ["node", "solution.js"]
+verilog:
+  id: "verilog"
+  name: "Verilog"
+  source_file: "solution.v"
+  is_compiled: true
+  build_cmd: ["iverilog", "-o", "solution.vvp", "solution.v"]
+  run_cmd: ["vvp", "solution.vvp"]
