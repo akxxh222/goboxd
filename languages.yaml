@@ -34,10 +34,10 @@ c:
 java:
   id: "java"
   name: "Java"
-  source_file: "Solution.java"
+  source_file: "MemoryHog.java"
   is_compiled: true
-  build_cmd: ["javac", "Solution.java"]
-  run_cmd: ["java", "Solution"]
+  build_cmd: ["javac", "MemoryHog.java"]
+  run_cmd: ["java", "MemoryHog"]
 bash:
   id: "bash"
   name: "Bash"

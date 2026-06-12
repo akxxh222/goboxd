@@ -1,17 +1,24 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/thesouldev/goboxd/internal/config"
 	"github.com/thesouldev/goboxd/internal/runner"
 	"github.com/thesouldev/goboxd/internal/security"
 	"github.com/thesouldev/goboxd/internal/types"
 )
+
+// runSemaphore limits the number of concurrent execution environments.
+// 6 concurrent runs * ~300MB per Java run = 1.8GB, safely under the 2GB limit.
+// Prevents OOM kills and enables graceful degradation via queuing.
+var runSemaphore = make(chan struct{}, 6)
 
 func NewMux() *http.ServeMux {
 	mux := http.NewServeMux()
@@ -169,6 +176,22 @@ func info(w http.ResponseWriter, r *http.Request) {
 
 func run(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
+
+	// Enforce 10-second request timeout (including queue time)
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// Acquire concurrency slot for graceful degradation
+	select {
+	case runSemaphore <- struct{}{}:
+		defer func() { <-runSemaphore }()
+	case <-ctx.Done():
+		// Request queued too long
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "server at capacity, request queued too long",
+		})
 		return
 	}
 

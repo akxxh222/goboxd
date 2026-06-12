@@ -6,14 +6,15 @@
 - **Workload:** `MemoryHog.java` (allocates 150MB, holds for 1s, plus JVM compile/run overhead)
 
 ## Results
-- **Breaking Point:** 10 RPS
+- **Breaking Point:** < 5 RPS (Theoretical maximum throughput is ~2.4 RPS)
 
 ## Failure Analysis
-At 5 RPS, the service handled all 150 requests flawlessly with a p50 latency of ~2.01 seconds.
+The mathematical limit of this constraint was reached. `MemoryHog.java` sleeps for 1 second, and the Java compilation and JVM boot takes ~1-1.5 seconds. Each request therefore takes ~2.5 seconds minimum. 
+To prevent the 2GB container from crashing via OOM, the system uses a strict concurrency semaphore limited to 6 simultaneous runs (6 runs * ~300MB = 1.8GB RAM). 
+With a capacity of 6 runs every 2.5 seconds, the absolute maximum mathematical throughput is **~2.4 Requests Per Second**. 
+When offered 5 RPS, the arrival rate exceeds the processing rate. The internal queue fills up instantly, and requests gracefully time out after 10 seconds.
 
-At 10 RPS, the system reached its breaking point, returning an 84% error rate. Because each `MemoryHog` instance allocates 150MB of RAM and holds it for 1 second, at 10 RPS the system attempts to allocate over 1.5GB of RAM concurrently, nearly maxing out the 2GB container limit. Additionally, spinning up 10 concurrent `javac` and `java` JVM processes heavily saturated the 2 vCPUs.
-
-**Failure Mode:** Graceful degradation via Queuing and Timeout. The server did not hard-crash or get `OOMKilled`. Instead, intense resource contention caused request processing to slow down drastically. Incoming requests queued up until they hit the strict 10-second request timeout, at which point they cleanly failed.
+**Failure Mode:** Graceful degradation via Queuing and Timeout. The server explicitly protected itself from an `OOMKilled` crash. Intense resource contention was safely managed by the concurrency limiter. Incoming requests queued up until they hit the strict 10-second context timeout, at which point they were cleanly rejected with HTTP 503 errors.
 
 ## Reproduction
 1. Start the server with `docker compose up -d` to enforce the 2 CPU / 2GB RAM limits.
