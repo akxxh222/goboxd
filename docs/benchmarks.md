@@ -1,5 +1,5 @@
 # Benchmarks
 
-No benchmark measurements have been collected yet.
+Extensive load testing has been performed to determine the mathematical breaking point and verify graceful degradation under strict constraints (2 vCPU, 2GB RAM).
 
-Benchmarking and sustained-load testing are planned for later stages of the hackathon.
+Please see `docs/loadtest/README.md` for full benchmark results, latency graphs, and failure analysis.

@@ -4,6 +4,11 @@ This document describes the languages supported by the current goboxd implementa
 
 ## Supported languages
 
+- `r`: R
+- `ocaml`: OCaml
+- `bash`: Bash
+- `node`: Node.js
+- `verilog`: Verilog
 - `py3`: Python 3
 - `cpp`: C++
 - `c`: C
@@ -11,9 +16,9 @@ This document describes the languages supported by the current goboxd implementa
 
 ## Language registry
 
-- The repository does not use a YAML-driven language registry.
-- Supported languages are hardcoded in `internal/runner/runner.go`.
-- Adding a new language requires modifying the runner dispatch logic and implementing a new handler.
+- The repository uses a dynamic YAML-driven language registry (`languages.yaml`).
+- Adding a new language requires adding a single YAML block and no Go code modifications.
+- Legacy Stage 1 languages are preserved as a fallback in `internal/runner/runner.go` (Strangler Fig Pattern).
 
 ## Python 3
 

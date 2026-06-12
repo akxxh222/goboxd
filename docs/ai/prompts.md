@@ -167,3 +167,42 @@ Reviewed the specification and compared it against the current implementation.
 
 **What we used / didn't use:**
 Used the checklist as a guide but manually validated endpoints, execution flows, tests and Docker functionality before considering Stage 1 complete.
+
+---
+
+## YAML Registry Migration
+
+**Prompt:**
+How can we make adding a language just one YAML block and one PR?
+
+**Response summary:**
+Suggested a dynamic YAML registry parsed at startup, combined with a generic `nsjail` runner that interprets the YAML configurations.
+
+**What we used / didn't use:**
+Implemented the YAML registry but intentionally kept the old Go files as a Stage 1 fallback (Strangler Fig pattern).
+
+---
+
+## Payload Testing Errors
+
+**Prompt:**
+R and OCaml are crashing with "Fatal error: the limit on the number of open files is too low" during blind payload testing.
+
+**Response summary:**
+Explained that R and OCaml aggressively open shared libraries and require higher limits. Suggested bumping generic default limits to "max".
+
+**What we used / didn't use:**
+Applied the generous sandbox defaults to the generic YAML runner to prevent OOM/file-descriptor crashes.
+
+---
+
+## Load Testing Analysis
+
+**Prompt:**
+Review the Vegeta load test CSV results. We are getting 100% errors past 5 RPS.
+
+**Response summary:**
+Analyzed the physics of the 2vCPU/2GB constraint vs the MemoryHog program. Proved the theoretical max throughput is ~2.4 RPS. Suggested implementing a 6-slot concurrency semaphore.
+
+**What we used / didn't use:**
+Implemented the semaphore to provide graceful degradation via request queuing and timeouts instead of container crashes. Documented the mathematical proof.

@@ -2,7 +2,7 @@
 
 ## High-level overview
 
-goboxd is a Linux-only code execution service built in Go. It accepts HTTP requests, validates them, writes source files to a temporary directory, and executes the code inside `nsjail` sandboxes. The service currently supports Python 3 and C++.
+goboxd is a Linux-only code execution service built in Go. It accepts HTTP requests, validates them, writes source files to a temporary directory, and executes the code inside `nsjail` sandboxes. The service supports 9 languages dynamically loaded via a YAML registry (`languages.yaml`), with legacy handlers gracefully retained via the Strangler Fig pattern.
 
 ## Request lifecycle
 
@@ -84,7 +84,8 @@ Client
 - `internal/httpapi.NewMux` registers endpoints.
 - `POST /run` is handled by `internal/httpapi.run`.
 - `run` parses JSON, validates with `internal/security.ValidateRunRequest`, and creates a temp directory with `os.MkdirTemp`.
-- `runner.Run` dispatches based on `language`.
+- `runner.Run` checks the dynamic `languages.yaml` registry first.
+- If the language is not in the YAML, it falls back to the legacy Stage 1 switch statement.
 - `internal/runner/sandboxedCommand` builds the `nsjail` command line.
 - The language-specific runner writes source to a fixed filename and executes inside the sandbox.
 - Output is captured using `cappedBuffer` and returned in the response.

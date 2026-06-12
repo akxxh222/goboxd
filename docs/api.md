@@ -333,6 +333,6 @@ Status vocabulary mapping
 
 Notes
 
-- Supported languages are hardcoded in `internal/runner/runner.go`.
-- There is no YAML-driven language registry in the current implementation.
+- Supported languages are dynamically loaded via a YAML registry (`languages.yaml`).
+- The legacy hardcoded runner logic remains as a Stage 1 fallback pattern.
 - The `/readyz` endpoint verifies only binary availability, not sandbox capability.
