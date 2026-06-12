@@ -1,89 +1,89 @@
 # goboxd
 
-goboxd is a Go HTTP service that executes untrusted code inside `nsjail` sandboxes and returns structured build and test results over HTTP.
+A small, secure Go service for running untrusted code inside sandboxed environments and returning structured results over HTTP.
 
-The current implementation supports Python 3, C++, C, and Java execution, request validation, resource limits, and sandboxed program execution through `nsjail`.
+Features
 
-## Supported Languages
+- Runs user-submitted code in isolated `nsjail` sandboxes.
+- Supported languages
 
-* Python 3 (`py3`)
-* C++ (`cpp`)
-* C (`c`)
-* Java (`java`)
+- Python 3 (`py3`)
+- C (`c`)
+- C++ (`cpp`)
+- Java (`java`)
+- Bash (`bash`)
+- Node.js / JavaScript (`node`)
+- Verilog (`verilog`)
+- Request validation, resource limits, and output truncation.
+- Unit and integration tests with a Docker-based local workflow.
 
-## Running Locally
+Quick start
 
-Build the Docker image:
+Prerequisites: Docker, Make, and a Go toolchain.
 
-```sh
-make build
-```
+1. Build the Docker image:
 
-Start the service:
+	 ```sh
+	 make build
+	 ```
 
-```sh
-make run
-```
+2. Run the service locally:
 
-Verify that the service is running:
+	 ```sh
+	 make run
+	 ```
 
-```sh
-curl http://localhost:8080/healthz
-```
+3. Check health:
 
-Expected response:
+	 ```sh
+	 curl http://localhost:8080/healthz
+	 ```
 
-```json
-{"status":"ok"}
-```
+	 Expected response: `{"status":"ok"}`
 
-Run unit tests:
+Development
 
-```sh
-make test
-```
+- Run unit tests:
 
-Run integration tests:
+	```sh
+	make test
+	```
 
-```sh
-make integration
-```
+- Run integration tests:
 
-The service listens on port `8080`.
+	```sh
+	make integration
+	```
 
-## Project Structure
+- Run Go tests directly:
 
-```text
-cmd/            Service entrypoint
-internal/       Application packages
-docs/           Project documentation
-tests/          Integration tests
-```
+	```sh
+	go test ./...
+	```
 
-## Documentation
+API and docs
 
-Additional documentation is available under `docs/`:
+See the docs folder for detailed documentation and API specs: [docs/api.md](docs/api.md), [docs/architecture.md](docs/architecture.md).
 
-* `docs/api.md` — API endpoints and request/response formats
-* `docs/architecture.md` — System design and request flow
-* `docs/security.md` — Security controls and mitigations
-* `docs/languages.md` — Language execution model
-* `docs/benchmarks.md` — Benchmarking and load-testing notes
+Repository layout
 
-## Current Status
+- `cmd/` — service entrypoint
+- `internal/` — application code (runner, config, httpapi, security)
+- `docs/` — design and API documentation
+- `tests/` — integration and end-to-end tests
 
-Implemented:
+Contributing
 
-* `GET /healthz`
-* `GET /readyz`
-* `GET /info`
-* `POST /run`
-* Python 3 execution
-* C++ compilation and execution
-* Request validation
-* Output size limits and truncation
-* Sandbox execution using `nsjail`
-* Unit and integration tests
-* Docker-based local development workflow
+Contributions are welcome. Please open issues or pull requests and follow existing code style and tests.
 
-See the documentation in `docs/` for implementation details.
+License
+
+This project is licensed under the terms in the repository `LICENSE` file.
+
+Contact
+
+For questions or support, open an issue on the repository.
+
+----
+
+Updated for clarity and streamlined developer onboarding.
