@@ -4,3 +4,10 @@ r:
   source_file: "solution.R"
   is_compiled: false
   run_cmd: ["Rscript", "--vanilla", "solution.R"]
+ocaml:
+  id: "ocaml"
+  name: "OCaml"
+  source_file: "solution.ml"
+  is_compiled: true
+  build_cmd: ["ocamlopt", "-o", "solution", "solution.ml"]
+  run_cmd: ["./solution"]

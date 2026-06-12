@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -48,6 +49,33 @@ func TestCappedBufferTruncates(t *testing.T) {
 	content := strings.TrimSuffix(got, config.OutputTruncatedMarker)
 	if len(content) != 10 {
 		t.Fatalf("expected truncated content length 10, got %d", len(content))
+	}
+}
+
+func TestRunSupportsRWithoutRegistryLoaded(t *testing.T) {
+	oldRegistry := Registry
+	Registry = nil
+	defer func() { Registry = oldRegistry }()
+
+	tempDir := t.TempDir()
+	req := types.RunRequest{
+		Language: "r",
+		Source:   "cat('hello from r\n')",
+		Tests: []types.TestCase{{
+			ExpectedStdout: "hello from r\n",
+		}},
+	}
+
+	resp, ok := Run(tempDir, req)
+	if !ok {
+		t.Fatal("expected runner to handle r language")
+	}
+	if resp.Status != "accepted" {
+		t.Fatalf("expected accepted status, got %q", resp.Status)
+	}
+
+	if err := os.Chmod(tempDir, 0o755); err != nil {
+		t.Fatalf("failed to chmod temp dir: %v", err)
 	}
 }
 
