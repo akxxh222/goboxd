@@ -21,6 +21,14 @@ func main() {
 		log.Fatalf("nsjail is not installed or not in PATH: %v", err)
 	}
 
+	registryPath := os.Getenv("LANGUAGES_PATH")
+	if registryPath == "" {
+		registryPath = "languages.yaml"
+	}
+	if err := runner.LoadRegistry(registryPath); err != nil {
+		log.Printf("warning: failed to load %s: %v", registryPath, err)
+	}
+
 	if removed, err := runner.CleanupStaleTempDirs(os.TempDir(), config.StaleTempDirAge); err != nil {
 		log.Printf("stale temp dir cleanup failed: %v", err)
 	} else if removed > 0 {

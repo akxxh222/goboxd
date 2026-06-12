@@ -8,6 +8,9 @@ import (
 )
 
 func Run(tempDir string, req types.RunRequest) (types.RunResponse, bool) {
+	if def, ok := Registry[req.Language]; ok {
+		return runGeneric(tempDir, req, def), true
+	}
 	switch req.Language {
 	case "py3":
 		return runPython(tempDir, req), true

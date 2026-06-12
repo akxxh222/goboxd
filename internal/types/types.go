@@ -9,6 +9,18 @@ type RunRequest struct {
 	Language string     `json:"language"`
 	Source   string     `json:"source"`
 	Tests    []TestCase `json:"tests"`
+
+	ResourceOverrides *ResourceOverrides `json:"resource_overrides,omitempty"`
+	BuildFlags        []string           `json:"build_flags,omitempty"`
+	RunFlags          []string           `json:"run_flags,omitempty"`
+}
+
+type ResourceOverrides struct {
+	TimeLimitSeconds string `json:"time_limit_seconds,omitempty"`
+	AddressSpaceMB   string `json:"address_space_mb,omitempty"`
+	FileSizeMB       string `json:"file_size_mb,omitempty"`
+	OpenFiles        string `json:"open_files,omitempty"`
+	Processes        string `json:"processes,omitempty"`
 }
 
 type BuildResult struct {

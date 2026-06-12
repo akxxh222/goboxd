@@ -51,6 +51,16 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 		"vvp":      "ok",
 	}
 
+	for _, def := range runner.Registry {
+		if len(def.RunCmd) > 0 {
+			if _, err := exec.LookPath(def.RunCmd[0]); err != nil {
+				checks[def.RunCmd[0]] = "missing"
+			} else {
+				checks[def.RunCmd[0]] = "ok"
+			}
+		}
+	}
+
 	if _, err := exec.LookPath("nsjail"); err != nil {
 		checks["nsjail"] = "missing"
 	}
@@ -112,38 +122,25 @@ func info(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var langs []map[string]string
+	for id, def := range runner.Registry {
+		langs = append(langs, map[string]string{
+			"id":   id,
+			"name": def.Name,
+		})
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"name": "goboxd",
-		"languages": []map[string]string{
-			{
-				"id":   "py3",
-				"name": "Python 3",
-			},
-			{
-				"id":   "cpp",
-				"name": "C++",
-			},
-			{
-				"id":   "c",
-				"name": "C",
-			},
-			{
-				"id":   "java",
-				"name": "Java",
-			},
-			{
-				"id":   "bash",
-				"name": "Bash",
-			},
-			{
-				"id":   "node",
-				"name": "JavaScript (Node.js)",
-			},
-			{
-				"id":   "verilog",
-				"name": "Verilog",
-			},
-		},
+		"languages": append(langs, []map[string]string{
+			{"id": "py3", "name": "Python 3"},
+			{"id": "cpp", "name": "C++"},
+			{"id": "c", "name": "C"},
+			{"id": "java", "name": "Java"},
+			{"id": "bash", "name": "Bash"},
+			{"id": "node", "name": "JavaScript (Node.js)"},
+			{"id": "verilog", "name": "Verilog"},
+		}...),
 		"endpoints": []string{
 			"GET /healthz",
 			"GET /readyz",

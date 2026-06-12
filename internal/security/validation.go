@@ -1,6 +1,8 @@
 package security
 
 import (
+	"strings"
+
 	"github.com/thesouldev/goboxd/internal/config"
 	"github.com/thesouldev/goboxd/internal/types"
 )
@@ -33,6 +35,24 @@ func ValidateRunRequest(req types.RunRequest) string {
 
 		if len(test.ExpectedStdout) > config.MaxExpectedBytes {
 			return "expected stdout is too large"
+		}
+	}
+
+	for _, flag := range req.BuildFlags {
+		if !strings.HasPrefix(flag, "-") {
+			return "build flags must start with - or --"
+		}
+		if strings.ContainsAny(flag, ";&|<>$\n\r") {
+			return "invalid character in build flag"
+		}
+	}
+
+	for _, flag := range req.RunFlags {
+		if !strings.HasPrefix(flag, "-") {
+			return "run flags must start with - or --"
+		}
+		if strings.ContainsAny(flag, ";&|<>$\n\r") {
+			return "invalid character in run flag"
 		}
 	}
 

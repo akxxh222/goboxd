@@ -1,0 +1,6 @@
+r:
+  id: "r"
+  name: "R"
+  source_file: "solution.R"
+  is_compiled: false
+  run_cmd: ["Rscript", "solution.R"]
