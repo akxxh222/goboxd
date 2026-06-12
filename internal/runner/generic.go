@@ -127,6 +127,7 @@ func runGenericTest(tempDir string, req types.RunRequest, def LanguageDef, test 
 		FileSizeMB:       config.SandboxFileSizeMB,
 		OpenFiles:        config.SandboxOpenFiles,
 		Processes:        config.SandboxProcesses,
+		ReadWriteDirs:    []string{tempDir},
 	}
 	applyOverrides(&opts, req.ResourceOverrides)
 

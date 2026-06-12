@@ -17,7 +17,7 @@ func TestRE2E(t *testing.T) {
 			ID:         "r",
 			Name:       "R",
 			SourceFile: "solution.R",
-			RunCmd:     []string{"Rscript", "solution.R"},
+			RunCmd:     []string{"Rscript", "--vanilla", "solution.R"},
 		},
 	}
 
@@ -34,6 +34,12 @@ func TestRE2E(t *testing.T) {
 	req := types.RunRequest{
 		Language: "r",
 		Source:   "cat('Hello from R E2E\n')",
+		ResourceOverrides: &types.ResourceOverrides{
+			AddressSpaceMB: "max",
+			Processes:      "max",
+			OpenFiles:      "max",
+			FileSizeMB:     "max",
+		},
 		Tests: []types.TestCase{
 			{Stdin: "", ExpectedStdout: "Hello from R E2E\n"},
 		},

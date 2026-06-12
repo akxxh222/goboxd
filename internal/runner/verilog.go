@@ -57,7 +57,7 @@ func buildVerilog(tempDir string, binaryName string) types.BuildResult {
 		OpenFiles:        "128",
 		Processes:        "32",
 		ReadWriteDirs:    []string{tempDir},
-	}, "env", "TMPDIR=.", "iverilog", "-o", binaryName, "solution.v")
+	}, "iverilog", "-o", binaryName, "solution.v")
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)

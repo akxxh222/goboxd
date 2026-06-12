@@ -54,6 +54,7 @@ func sandboxedCommandWithOptions(ctx context.Context, workDir string, opts Sandb
 		"--rlimit_nproc", opts.Processes,
 		"--chroot", "/",
 		"-E", "PATH",
+		"-E", "TMPDIR=" + workDir,
 	}
 
 	for _, rwDir := range opts.ReadWriteDirs {

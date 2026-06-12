@@ -3,4 +3,4 @@ r:
   name: "R"
   source_file: "solution.R"
   is_compiled: false
-  run_cmd: ["Rscript", "solution.R"]
+  run_cmd: ["Rscript", "--vanilla", "solution.R"]
