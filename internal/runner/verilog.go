@@ -57,9 +57,9 @@ func buildVerilog(tempDir string, binaryName string) types.BuildResult {
 	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
 		TimeLimitSeconds: "10",
 		AddressSpaceMB:   "max",
-		FileSizeMB:       "10",
-		OpenFiles:        "128",
-		Processes:        "32",
+		FileSizeMB:       "10", // to write binary
+		OpenFiles:        "max",
+		Processes:        "max",
 		ReadWriteDirs:    []string{tempDir},
 	}, "iverilog", "-o", binaryName, "solution.v")
 	cmd.Dir = tempDir
@@ -98,7 +98,14 @@ func runVerilogTest(tempDir string, executable string, test types.TestCase) type
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
 
-	cmd := sandboxedCommand(ctx, tempDir, "vvp", executable)
+	opts := SandboxOptions{
+		TimeLimitSeconds: config.SandboxCPUSeconds,
+		AddressSpaceMB:   config.SandboxAddressSpaceMB,
+		FileSizeMB:       config.SandboxFileSizeMB,
+		OpenFiles:        "max",
+		Processes:        "max",
+	}
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, opts, "vvp", executable)
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)

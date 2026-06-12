@@ -67,9 +67,9 @@ func buildC(tempDir string, binaryName string) types.BuildResult {
 	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
 		TimeLimitSeconds: "10",
 		AddressSpaceMB:   "1024",
-		FileSizeMB:       "10",
-		OpenFiles:        "128",
-		Processes:        "32",
+		FileSizeMB:       "10", // to write binary
+		OpenFiles:        "max",
+		Processes:        "max",
 		ReadWriteDirs:    []string{tempDir},
 	}, "gcc", "-w", "solution.c", "-o", binaryName)
 	cmd.Dir = tempDir
@@ -108,7 +108,14 @@ func runCTest(tempDir string, executable string, test types.TestCase) types.Test
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
 
-	cmd := sandboxedCommand(ctx, tempDir, executable)
+	opts := SandboxOptions{
+		TimeLimitSeconds: config.SandboxCPUSeconds,
+		AddressSpaceMB:   config.SandboxAddressSpaceMB,
+		FileSizeMB:       config.SandboxFileSizeMB,
+		OpenFiles:        "max",
+		Processes:        "max",
+	}
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, opts, executable)
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)

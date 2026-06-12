@@ -67,9 +67,9 @@ func buildCpp(tempDir string, binaryName string) types.BuildResult {
 	cmd := sandboxedCommandWithOptions(ctx, tempDir, SandboxOptions{
 		TimeLimitSeconds: "10",
 		AddressSpaceMB:   "1024", // g++ needs more memory to compile
-		FileSizeMB:       "10",   // to write binary
-		OpenFiles:        "128",
-		Processes:        "32",
+		FileSizeMB:       "10",
+		OpenFiles:        "max",
+		Processes:        "max",
 		ReadWriteDirs:    []string{tempDir},
 	}, "g++", "-w", "solution.cpp", "-o", binaryName)
 	cmd.Dir = tempDir
@@ -108,7 +108,14 @@ func runCppTest(tempDir string, executable string, test types.TestCase) types.Te
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
 
-	cmd := sandboxedCommand(ctx, tempDir, executable)
+	opts := SandboxOptions{
+		TimeLimitSeconds: config.SandboxCPUSeconds,
+		AddressSpaceMB:   config.SandboxAddressSpaceMB,
+		FileSizeMB:       config.SandboxFileSizeMB,
+		OpenFiles:        "max",
+		Processes:        "max",
+	}
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, opts, executable)
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)

@@ -41,7 +41,14 @@ func runPythonTest(tempDir string, test types.TestCase) types.TestResult {
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
 
-	cmd := sandboxedCommand(ctx, tempDir, PythonCommand(), "solution.py")
+	opts := SandboxOptions{
+		TimeLimitSeconds: config.SandboxCPUSeconds,
+		AddressSpaceMB:   "max",
+		FileSizeMB:       config.SandboxFileSizeMB,
+		OpenFiles:        "max",
+		Processes:        "max",
+	}
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, opts, PythonCommand(), "solution.py")
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)

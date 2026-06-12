@@ -45,8 +45,8 @@ func runNodeTest(tempDir string, test types.TestCase) types.TestResult {
 		TimeLimitSeconds: config.SandboxCPUSeconds,
 		AddressSpaceMB:   "max", // V8 engine requires a large address space
 		FileSizeMB:       config.SandboxFileSizeMB,
-		OpenFiles:        config.SandboxOpenFiles,
-		Processes:        config.SandboxProcesses,
+		OpenFiles:        "max",
+		Processes:        "max",
 	}, "node", "solution.js")
 	cmd.Dir = tempDir
 

@@ -41,7 +41,14 @@ func runBashTest(tempDir string, test types.TestCase) types.TestResult {
 	ctx, cancel := context.WithTimeout(context.Background(), config.RunTimeout)
 	defer cancel()
 
-	cmd := sandboxedCommand(ctx, tempDir, "bash", "solution.sh")
+	opts := SandboxOptions{
+		TimeLimitSeconds: config.SandboxCPUSeconds,
+		AddressSpaceMB:   config.SandboxAddressSpaceMB,
+		FileSizeMB:       config.SandboxFileSizeMB,
+		OpenFiles:        "max",
+		Processes:        "max",
+	}
+	cmd := sandboxedCommandWithOptions(ctx, tempDir, opts, "bash", "solution.sh")
 	cmd.Dir = tempDir
 
 	stdout := newCappedBuffer(config.MaxCapturedOutputLen)

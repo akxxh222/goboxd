@@ -64,8 +64,8 @@ goboxd implements the **Strangler Fig Pattern** to elegantly migrate from hardco
 
 ```mermaid
 flowchart TD
-    Req([Incoming POST /run]) --> Route[runner.Run()]
-    Route --> CheckRegistry{Is language defined in<br>languages.yaml?}
+    Req(["Incoming POST /run"]) --> Route["runner.Run()"]
+    Route --> CheckRegistry{"Is language defined in<br>languages.yaml?"}
     
     CheckRegistry -- "Yes (Stage 2/3)" --> GenericRunner[Generic YAML Runner]
     GenericRunner --> Sandbox[nsjail Sandbox Isolation]
@@ -80,7 +80,7 @@ flowchart TD
     CppRunner --> Sandbox
     JavaRunner --> Sandbox
     
-    Sandbox --> Res([HTTP Response])
+    Sandbox --> Res(["HTTP Response"])
     
     style GenericRunner fill:#2ea043,stroke:#fff,stroke-width:2px,color:#fff
     style Switch fill:#8b949e,stroke:#fff,stroke-width:2px,color:#fff
