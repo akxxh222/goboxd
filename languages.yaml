@@ -22,22 +22,22 @@ cpp:
   name: "C++"
   source_file: "solution.cpp"
   is_compiled: true
-  build_cmd: ["g++", "-o", "solution", "solution.cpp"]
+  build_cmd: ["g++", "-w", "-o", "solution", "solution.cpp"]
   run_cmd: ["./solution"]
 c:
   id: "c"
   name: "C"
   source_file: "solution.c"
   is_compiled: true
-  build_cmd: ["gcc", "-o", "solution", "solution.c"]
+  build_cmd: ["gcc", "-w", "-o", "solution", "solution.c"]
   run_cmd: ["./solution"]
 java:
   id: "java"
   name: "Java"
-  source_file: "MemoryHog.java"
+  source_file: "Main.java"
   is_compiled: true
-  build_cmd: ["javac", "MemoryHog.java"]
-  run_cmd: ["java", "MemoryHog"]
+  build_cmd: ["javac", "-J-Xmx512m", "Main.java"]
+  run_cmd: ["java", "-Xmx512m", "-cp", ".", "Main"]
 bash:
   id: "bash"
   name: "Bash"

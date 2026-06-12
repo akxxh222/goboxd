@@ -47,65 +47,44 @@ func readyz(w http.ResponseWriter, r *http.Request) {
 
 	checks := map[string]string{
 		"nsjail": "ok",
-		"python": "ok",
-		"g++":    "ok",
-		"gcc":    "ok",
-		"javac":  "ok",
-		"java":   "ok",
-		"bash":   "ok",
-		"node":   "ok",
-		"iverilog": "ok",
-		"vvp":      "ok",
-	}
-
-	for _, def := range runner.Registry {
-		if len(def.RunCmd) > 0 {
-			if _, err := exec.LookPath(def.RunCmd[0]); err != nil {
-				checks[def.RunCmd[0]] = "missing"
-			} else {
-				checks[def.RunCmd[0]] = "ok"
-			}
-		}
 	}
 
 	if _, err := exec.LookPath("nsjail"); err != nil {
 		checks["nsjail"] = "missing"
 	}
 
-	if _, err := exec.LookPath(runner.PythonCommand()); err != nil {
-		checks["python"] = "missing"
+	for _, def := range runner.Registry {
+		if len(def.BuildCmd) > 0 {
+			cmd := def.BuildCmd[0]
+			if !strings.HasPrefix(cmd, "./") && !strings.HasPrefix(cmd, "/") {
+				if _, err := exec.LookPath(cmd); err != nil {
+					checks[cmd] = "missing"
+				} else {
+					checks[cmd] = "ok"
+				}
+			}
+		}
+		if len(def.RunCmd) > 0 {
+			cmd := def.RunCmd[0]
+			if !strings.HasPrefix(cmd, "./") && !strings.HasPrefix(cmd, "/") {
+				if _, err := exec.LookPath(cmd); err != nil {
+					checks[cmd] = "missing"
+				} else {
+					checks[cmd] = "ok"
+				}
+			}
+		}
 	}
 
-	if _, err := exec.LookPath("g++"); err != nil {
-		checks["g++"] = "missing"
-	}
-
-	if _, err := exec.LookPath("gcc"); err != nil {
-		checks["gcc"] = "missing"
-	}
-
-	if _, err := exec.LookPath("javac"); err != nil {
-		checks["javac"] = "missing"
-	}
-
-	if _, err := exec.LookPath("java"); err != nil {
-		checks["java"] = "missing"
-	}
-
-	if _, err := exec.LookPath("bash"); err != nil {
-		checks["bash"] = "missing"
-	}
-
-	if _, err := exec.LookPath("node"); err != nil {
-		checks["node"] = "missing"
-	}
-
-	if _, err := exec.LookPath("iverilog"); err != nil {
-		checks["iverilog"] = "missing"
-	}
-
-	if _, err := exec.LookPath("vvp"); err != nil {
-		checks["vvp"] = "missing"
+	if len(runner.Registry) == 0 {
+		legacyCmds := []string{runner.PythonCommand(), "g++", "gcc", "javac", "java", "bash", "node", "iverilog", "vvp"}
+		for _, cmd := range legacyCmds {
+			if _, err := exec.LookPath(cmd); err != nil {
+				checks[cmd] = "missing"
+			} else {
+				checks[cmd] = "ok"
+			}
+		}
 	}
 
 	status := "ready"
@@ -137,9 +116,8 @@ func info(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"name": "goboxd",
-		"languages": append(langs, []map[string]string{
+	if len(langs) == 0 {
+		langs = []map[string]string{
 			{"id": "py3", "name": "Python 3"},
 			{"id": "cpp", "name": "C++"},
 			{"id": "c", "name": "C"},
@@ -147,7 +125,12 @@ func info(w http.ResponseWriter, r *http.Request) {
 			{"id": "bash", "name": "Bash"},
 			{"id": "node", "name": "JavaScript (Node.js)"},
 			{"id": "verilog", "name": "Verilog"},
-		}...),
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"name": "goboxd",
+		"languages": langs,
 		"endpoints": []string{
 			"GET /healthz",
 			"GET /readyz",

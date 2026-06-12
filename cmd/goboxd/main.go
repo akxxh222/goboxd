@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/thesouldev/goboxd/internal/config"
@@ -39,8 +43,6 @@ func main() {
 		log.Printf("removed %d stale temp dirs", removed)
 	}
 
-	log.Println("server running on :8080")
-
 	// Configure and start the HTTP server with strict timeouts to prevent connection exhaustion
 	server := &http.Server{
 		Addr:              ":8080",
@@ -51,5 +53,24 @@ func main() {
 		IdleTimeout:       30 * time.Second,
 	}
 
-	log.Fatal(server.ListenAndServe())
+	// Listen for OS signals to trigger graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// Start the server in a separate goroutine
+	go func() {
+		log.Println("server running on :8080")
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen and serve error: %v", err)
+		}
+	}()
+
+	// Block until a shutdown signal is received
+	<-stop
+	log.Println("shutdown signal received, waiting up to 30s for active runs to finish...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	server.Shutdown(ctx)
+	log.Println("server stopped cleanly")
 }
